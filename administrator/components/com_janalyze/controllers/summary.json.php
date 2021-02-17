@@ -7,15 +7,19 @@ class JanalyzeControllerSummary extends AdminController
 {
     public function execute($task)
     {
-        $model = $this->getModel();
-        echo new JsonResponse($model->getItems());
+        $familyID = $this->input->getInt('familyID');
+        $excludeID = $this->input->get('excludeID');
+        $model = $this->getModel('Summary', 'JanalyzeModel', ['familyID' => $familyID, 'excludeID' => $excludeID, 'floor' => false]);
+        $summary = $model->getItems();
+        $model = $this->getModel('Summary', 'JanalyzeModel', ['familyID' => $familyID, 'excludeID' => $excludeID, 'floor' => true]);
+        $floor = $model->getItems();
+
+        $json = ['summary' => $summary, 'floor' => $floor];
+        echo new JsonResponse($json);
     }
 
     public function getModel($name = 'Summary', $prefix = 'JanalyzeModel', $config = [])
     {
-        $familyID = $this->input->getInt('familyID');
-        $excludeID = $this->input->get('excludeID');
-        $floor = $this->input->getBool('2th_floor');
-		return parent::getModel($name, $prefix, ['familyID' => $familyID, 'excludeID' => $excludeID, 'floor' => $floor]);
+		return parent::getModel($name, $prefix, $config);
 	}
 }

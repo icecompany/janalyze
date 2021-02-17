@@ -15,9 +15,9 @@ class JanalyzeModelSummary extends ListModel
 		}
 
 		$this->familyID = $config['familyID'] ?? null;
-		$this->excludeID = $config[$this->excludeID] ?? null;
-		$this->export = $config[$this->export] ?? false;
-		$this->floor = $config[$this->floor] ?? false;
+		$this->excludeID = $config['excludeID'] ?? null;
+		$this->export = $config['export'] ?? false;
+		$this->floor = $config['floor'] ?? false;
 
 		parent::__construct($config);
 	}
