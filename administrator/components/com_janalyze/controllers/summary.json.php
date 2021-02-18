@@ -13,8 +13,10 @@ class JanalyzeControllerSummary extends AdminController
         $summary = $model->getItems();
         $model = $this->getModel('Summary', 'JanalyzeModel', ['familyID' => $familyID, 'excludeID' => $excludeID, 'floor' => true]);
         $floor = $model->getItems();
+        $model = $this->getModel('Squares', 'JanalyzeModel', ['familyID' => $familyID, 'excludeID' => $excludeID]);
+        $squares = $model->getItems();
 
-        $json = ['summary' => $summary, 'floor' => $floor];
+        $json = ['summary' => $summary, 'floor' => $floor, 'squares' => $squares];
         echo new JsonResponse($json);
     }
 

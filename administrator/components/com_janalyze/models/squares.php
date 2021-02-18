@@ -17,7 +17,6 @@ class JanalyzeModelSquares extends ListModel
 		$this->familyID = $config['familyID'] ?? null;
 		$this->excludeID = $config['excludeID'] ?? null;
 		$this->export = $config['export'] ?? false;
-		$this->floor = $config['floor'] ?? false;
 
 		parent::__construct($config);
 	}
@@ -36,12 +35,9 @@ class JanalyzeModelSquares extends ListModel
             ->leftJoin($db->qn('#__mkv_price_items') . ' pi on ci.itemID = pi.id')
             ->leftJoin($db->qn('s7vi9_mkv_contracts') . ' c on ci.contractID = c.id')
             ->leftJoin($db->qn('s7vi9_mkv_projects') . ' p on c.projectID = p.id')
-            ->where("pi.square_type in (1, 2, 3, 4, 5, 6, 9)")
+            ->where("pi.square_type in (1, 2, 3, 4, 5, 6, 9) and c.is_sponsor != 1 and c.status != 9")
             ->group("c.projectID, pi.square_type")
             ->order("c.projectID, pi.square_type");
-
-		$floor = (!$this->floor) ? 'not' : '';
-		$query->where("pi.square_type {$floor} in (7, 8)");
 
 		if (is_numeric($this->familyID)) $query->where("p.familyID = {$db->q($this->familyID)}");
 		if (!empty($this->excludeID)) {
@@ -60,32 +56,45 @@ class JanalyzeModelSquares extends ListModel
 	public function getItems()
     {
         $items = parent::getItems();
-        $types['2th_floor' ]= JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_2TH_FLOOR');
-        if (!$this->floor) {
-            $types['pavilion'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_PAVILION');
-            $types['street'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_STREET');
-            $types['sponsor'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_SPONSOR');
-            $types['non_commercial'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_NON_COMMERCIAL');
-            unset($types['2th_floor']);
-        }
-        $result = ['projects' => [], 'types' => $types, 'data' => [], 'total' => []];
+        $types = [1 => 'pavilion', 2 => 'pavilion', 3 => 'street', 4 => 'street', 5 => 'pavilion', 6 => 'street', 9 => 'pavilion'];
+        $square_types = [
+            1 => [
+                'pavilion' => [
+                    1 => 'Экспоместо в павильоне',
+                    2 => 'Экспоместо в павильоне (премиум)',
+                    5 => 'Экспоместо в павильоне ВПК',
+                ],
+                'street' => [
+                    3 => 'Экспоместо на улице',
+                    4 => 'Экспоместо на улице (под застройку)',
+                    6 => 'Экспоместо на улице ВПК',
+                ],
+            ],
+            2 => [
+                1 => 'Экспоместо в павильоне',
+            ],
+        ];
+
+        $result = ['projects' => [], 'types' => $square_types[$this->familyID], 'data' => [], 'total' => []];
         foreach ($items as $item) {
             if (!isset($result['projects'][$item->projectID])) $result['projects'][$item->projectID] = $item->project;
-            $square = ($item->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
-            $money = ($item->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
-            $result['data'][$item->tip][$item->projectID] = ['square' => $square, 'money' => $money];
-            if (!isset($result['total'][$item->projectID])) $result['total'][$item->projectID] = ['square' => 0, 'money' => 0];
-            $result['total'][$item->projectID]['square'] += $item->square;
-            $result['total'][$item->projectID]['money'] += $item->money;
+            $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
+            $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
+            $result['data'][$types[$item->square_type]][$item->square_type][$item->projectID] = ['square' => $square, 'money' => $money];
+            if (!isset($result['total'][$types[$item->square_type]][$item->projectID])) $result['total'][$types[$item->square_type]][$item->projectID] = ['square' => 0, 'money' => 0];
+            $result['total'][$types[$item->square_type]][$item->projectID]['square'] += $item->square;
+            $result['total'][$types[$item->square_type]][$item->projectID]['money'] += $item->money;
         }
         if (!$this->export) {
-            foreach (array_keys($result['total']) as $projectID) {
-                $result['total'][$projectID]['square'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $result['total'][$projectID]['square'], 2, ',', ' '));
-                $result['total'][$projectID]['money'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $result['total'][$projectID]['money'], 2, ',', ' '));
+            foreach (['pavilion', 'street'] as $type) {
+                foreach (array_keys($result['projects']) as $projectID) {
+                    $result['total'][$type][$projectID]['square'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float)$result['total'][$type][$projectID]['square'], 2, ',', ' '));
+                    $result['total'][$type][$projectID]['money'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float)$result['total'][$type][$projectID]['money'], 2, ',', ' '));
+                }
             }
         }
         return $result;
     }
 
-    private $familyID, $excludeID, $floor, $export;
+    private $familyID, $excludeID, $export;
 }

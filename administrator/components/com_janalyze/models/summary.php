@@ -71,8 +71,8 @@ class JanalyzeModelSummary extends ListModel
         $result = ['projects' => [], 'types' => $types, 'data' => [], 'total' => []];
         foreach ($items as $item) {
             if (!isset($result['projects'][$item->projectID])) $result['projects'][$item->projectID] = $item->project;
-            $square = ($item->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
-            $money = ($item->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
+            $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
+            $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
             $result['data'][$item->tip][$item->projectID] = ['square' => $square, 'money' => $money];
             if (!isset($result['total'][$item->projectID])) $result['total'][$item->projectID] = ['square' => 0, 'money' => 0];
             $result['total'][$item->projectID]['square'] += $item->square;
