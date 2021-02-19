@@ -33,8 +33,8 @@ class JanalyzeModelSquares extends ListModel
             ->select("ifnull(sum(if(c.currency = 'usd', ci.amount * p.course_usd, if(c.currency = 'eur', ci.amount * p.course_eur, ci.amount))),0) as money")
             ->from($db->qn('#__mkv_contract_items') . ' ci')
             ->leftJoin($db->qn('#__mkv_price_items') . ' pi on ci.itemID = pi.id')
-            ->leftJoin($db->qn('s7vi9_mkv_contracts') . ' c on ci.contractID = c.id')
-            ->leftJoin($db->qn('s7vi9_mkv_projects') . ' p on c.projectID = p.id')
+            ->leftJoin($db->qn('#__mkv_contracts') . ' c on ci.contractID = c.id')
+            ->leftJoin($db->qn('#__mkv_projects') . ' p on c.projectID = p.id')
             ->where("pi.square_type in (1, 2, 3, 4, 5, 6, 9) and c.is_sponsor != 1 and c.status != 9")
             ->group("c.projectID, pi.square_type")
             ->order("c.projectID, pi.square_type");
