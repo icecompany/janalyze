@@ -50,6 +50,8 @@ class JanalyzeModelSquares extends ListModel
             }
         }
 
+		$this->setState('list.limit', 0);
+
 		return $query;
 	}
 
