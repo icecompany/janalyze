@@ -44,8 +44,8 @@ class JanalyzeModelSquares extends ListModel
 		    if (is_numeric($this->excludeID)) {
 		        $query->where("c.projectID != {$db->q($this->excludeID)}");
             }
-		    if (is_array($this->excludeID) && count($this->excludeID) > 1) {
-		        $exclude = explode(', ', $this->excludeID);
+		    if (is_array($this->excludeID)) {
+		        $exclude = implode(', ', $this->excludeID);
 		        if (!empty($exclude)) $query->where("c.projectID not in ({$exclude})");
             }
         }
