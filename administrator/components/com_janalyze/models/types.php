@@ -84,11 +84,33 @@ class JanalyzeModelTypes extends ListModel
 
         $result = ['projects' => [], 'companies' => [], 'data' => [], 'total' => []];
         foreach ($items as $item) {
-            if (!isset($result['projects'][$item->projectID])) $result['projects'][$item->projectID] = $item->project;
+            if (!isset($result['projects'][$item->projectID])) $result['projects'][(string) $item->projectID] = $item->project;
+        }
+        foreach ($items as $item) {
+            $item->companyID = $item->companyID . " ";
             if (!isset($result['companies'][$item->companyID])) $result['companies'][$item->companyID] = $item->company;
             $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
             $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
-            $result['data'][$item->companyID][$item->projectID] = ['square' => $square, 'money' => $money];
+            if (!isset($result['data'][$item->companyID])) {
+                foreach ($result['projects'] as $projectID => $title) {
+                    $result['data'][$item->companyID][$projectID] = [
+                        'square_clean' => 0,
+                        'money_clean' => 0,
+                        'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
+                        'money' => JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format(0, 2, ',', ' ')),
+                        'percent_square' => "0%",
+                        'percent_money' => "0%",
+                    ];
+                }
+            }
+            $result['data'][$item->companyID][$item->projectID] = [
+                'square_clean' => $item->square,
+                'money_clean' => $item->money,
+                'square' => $square,
+                'money' => $money,
+                'percent_square' => "0%",
+                'percent_money' => "0%",
+            ];
             if (!isset($result['total'][$item->projectID])) $result['total'][$item->projectID] = ['square' => 0, 'money' => 0];
             $result['total'][$item->projectID]['square'] += $item->square;
             $result['total'][$item->projectID]['money'] += $item->money;
@@ -99,7 +121,26 @@ class JanalyzeModelTypes extends ListModel
                 $result['total'][$projectID]['money'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float)$result['total'][$projectID]['money'], 2, ',', ' '));
             }
         }
-        natcasesort($result['companies']);
+        $ids = [];
+        $i = 0;
+        foreach (array_keys($result['projects']) as $projectID) {
+            $ids[$i] = $projectID;
+            $i++;
+        }
+        foreach ($result['data'] as $companyID => $company) {
+            foreach ($ids as $i => $projectID) {
+                if (is_null($ids[$i-1])) continue;
+                foreach (['square', 'money'] as $what) {
+                    if ($result['data'][$companyID][$ids[$i-1]]["{$what}_clean"] === 0 || is_null($result['data'][$companyID][$ids[$i-1]]["{$what}_clean"]))
+                    {
+                        $result['data'][$companyID][$projectID]["percent_{$what}"] = ($result['data'][$companyID][$projectID]["{$what}_clean"] === 0 || is_null($result['data'][$companyID][$projectID]["{$what}_clean"])) ? "0%" : "100%";
+                        continue;
+                    }
+                    $result['data'][$companyID][$projectID]["percent_{$what}"] = round((($result['data'][$companyID][$projectID]["{$what}_clean"] / $result['data'][$companyID][$ids[$i-1]]["{$what}_clean"]) * 100 - 100)) . "%";
+                }
+            }
+        }
+        asort($result['companies']);
         return $result;
     }
 
