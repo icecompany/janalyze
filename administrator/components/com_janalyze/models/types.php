@@ -5,29 +5,28 @@ use Joomla\CMS\MVC\Model\ListModel;
 
 class JanalyzeModelTypes extends ListModel
 {
-	public function __construct($config = [])
-	{
-		if (empty($config['filter_fields']))
-		{
-			$config['filter_fields'] = [
-				'id',
-			];
-		}
+    public function __construct($config = [])
+    {
+        if (empty($config['filter_fields'])) {
+            $config['filter_fields'] = [
+                'id',
+            ];
+        }
 
-		$this->familyID = $config['familyID'] ?? null;
-		$this->excludeID = $config['excludeID'] ?? null;
-		$this->export = $config['export'] ?? false;
-		$this->square = $config['square_type'] ?? false;
-		$this->commercial = $config['commercial'] ?? false;
+        $this->familyID = $config['familyID'] ?? null;
+        $this->excludeID = $config['excludeID'] ?? null;
+        $this->export = $config['export'] ?? false;
+        $this->square = $config['square_type'] ?? false;
+        $this->commercial = $config['commercial'] ?? false;
 
-		parent::__construct($config);
-	}
+        parent::__construct($config);
+    }
 
-	protected function getListQuery()
-	{
-		$db = $this->getDbo();
-		$query = $db->getQuery(true);
-		$query
+    protected function getListQuery()
+    {
+        $db = $this->getDbo();
+        $query = $db->getQuery(true);
+        $query
             ->select("c.projectID, c.companyID")
             ->select("e.title as company")
             ->select("p.title as project")
@@ -41,61 +40,61 @@ class JanalyzeModelTypes extends ListModel
             ->group("c.projectID, c.companyID")
             ->order("c.projectID, e.title");
 
-		if (is_numeric($this->square)) {
-		    $query->where("pi.square_type = {$db->q($this->square)}");
+        if (is_numeric($this->square)) {
+            $query->where("pi.square_type = {$db->q($this->square)}");
         }
 
-		if (!empty($this->commercial)) {
-		    if ($this->commercial === 'commercial') {
-		        $query
+        if (!empty($this->commercial)) {
+            if ($this->commercial === 'commercial') {
+                $query
                     ->where("c.status != 9")
                     ->where("c.is_sponsor != 1");
             }
-		    if ($this->commercial === 'sponsor') {
-		        $query
+            if ($this->commercial === 'sponsor') {
+                $query
                     ->where("c.is_sponsor = 1");
             }
-		    if ($this->commercial === 'non_commercial') {
-		        $query
+            if ($this->commercial === 'non_commercial') {
+                $query
                     ->where("c.status = 9");
             }
         }
 
-		if (is_numeric($this->familyID)) $query->where("p.familyID = {$db->q($this->familyID)}");
+        if (is_numeric($this->familyID)) $query->where("p.familyID = {$db->q($this->familyID)}");
 
-		if (!empty($this->excludeID)) {
-		    if (is_numeric($this->excludeID)) {
-		        $query->where("c.projectID != {$db->q($this->excludeID)}");
+        if (!empty($this->excludeID)) {
+            if (is_numeric($this->excludeID)) {
+                $query->where("c.projectID != {$db->q($this->excludeID)}");
             }
-		    if (is_array($this->excludeID)) {
-		        $exclude = implode(', ', $this->excludeID);
-		        if (!empty($exclude)) $query->where("c.projectID not in ({$exclude})");
+            if (is_array($this->excludeID)) {
+                $exclude = implode(', ', $this->excludeID);
+                if (!empty($exclude)) $query->where("c.projectID not in ({$exclude})");
             }
         }
 
         $this->setState('list.limit', 0);
 
-		return $query;
-	}
+        return $query;
+    }
 
-	public function getItems()
+    public function getItems()
     {
         $items = parent::getItems();
 
         $result = ['projects' => [], 'companies' => [], 'data' => [], 'total' => []];
         foreach ($items as $item) {
-            if (!isset($result['projects'][$item->projectID])) $result['projects'][(string) $item->projectID] = $item->project;
+            if (!isset($result['projects'][$item->projectID])) $result['projects'][(string)$item->projectID] = $item->project;
         }
         foreach ($items as $item) {
             $item->companyID = $item->companyID . " ";
             if (!isset($result['companies'][$item->companyID])) $result['companies'][$item->companyID] = $item->company;
-            $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
-            $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
+            $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float)$item->square, 2, ',', ' '));
+            $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float)$item->money, 2, ',', ' '));
             if (!isset($result['data'][$item->companyID])) {
                 foreach ($result['projects'] as $projectID => $title) {
                     $result['data'][$item->companyID][$projectID] = [
-                        'square_clean' => 0,
-                        'money_clean' => 0,
+                        'square_clean' => (float)0,
+                        'money_clean' => (float)0,
                         'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
                         'money' => JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format(0, 2, ',', ' ')),
                         'percent_square' => "0%",
@@ -104,8 +103,8 @@ class JanalyzeModelTypes extends ListModel
                 }
             }
             $result['data'][$item->companyID][$item->projectID] = [
-                'square_clean' => $item->square,
-                'money_clean' => $item->money,
+                'square_clean' => (float)$item->square,
+                'money_clean' => (float)$item->money,
                 'square' => $square,
                 'money' => $money,
                 'percent_square' => "0%",
@@ -127,16 +126,22 @@ class JanalyzeModelTypes extends ListModel
             $ids[$i] = $projectID;
             $i++;
         }
-        foreach ($result['data'] as $companyID => $company) {
+        foreach (['square', 'money'] as $what) {
             foreach ($ids as $i => $projectID) {
-                if (is_null($ids[$i-1])) continue;
-                foreach (['square', 'money'] as $what) {
-                    if ($result['data'][$companyID][$ids[$i-1]]["{$what}_clean"] === 0 || is_null($result['data'][$companyID][$ids[$i-1]]["{$what}_clean"]))
-                    {
-                        $result['data'][$companyID][$projectID]["percent_{$what}"] = ($result['data'][$companyID][$projectID]["{$what}_clean"] === 0 || is_null($result['data'][$companyID][$projectID]["{$what}_clean"])) ? "0%" : "100%";
-                        continue;
+                foreach ($result['data'] as $companyID => $company) {
+                    if (!is_null($ids[$i - 1])) {
+
+                        if ($result['data'][$companyID][$ids[$i - 1]]["{$what}_clean"] == 0) {
+                            if ((float)$result['data'][$companyID][$projectID]["{$what}_clean"] == 0) {
+                                $result['data'][$companyID][$projectID]["percent_{$what}"] = "0%";
+                            }
+                            else {
+                                $result['data'][$companyID][$projectID]["percent_{$what}"] = "100%";
+                            }
+                        } else {
+                            $result['data'][$companyID][$projectID]["percent_{$what}"] = round((((float)$result['data'][$companyID][$projectID]["{$what}_clean"] / (float)$result['data'][$companyID][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
+                        }
                     }
-                    $result['data'][$companyID][$projectID]["percent_{$what}"] = round((($result['data'][$companyID][$projectID]["{$what}_clean"] / $result['data'][$companyID][$ids[$i-1]]["{$what}_clean"]) * 100 - 100)) . "%";
                 }
             }
         }
