@@ -103,8 +103,10 @@ class JanalyzeModelSummary extends ListModel
                 'money' => $money,
                 'percent_money' => "0%",
             ];
+            $result['total'][$item->projectID]['square_clean'] += $item->square;
             $result['total'][$item->projectID]['square'] += $item->square;
             $result['total'][$item->projectID]['money'] += $item->money;
+            $result['total'][$item->projectID]['money_clean'] += $item->money;
         }
         if (!$this->export) {
             foreach (array_keys($result['total']) as $projectID) {
@@ -132,6 +134,21 @@ class JanalyzeModelSummary extends ListModel
                             }
                         } else {
                             $result['data'][$tip][$projectID]["percent_{$what}"] = round((((float)$result['data'][$tip][$projectID]["{$what}_clean"] / (float)$result['data'][$tip][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
+                        }
+                    }
+                }
+                foreach ($result['total'] as $prj => $company) {
+                    if (!is_null($ids[$i - 1])) {
+
+                        if ($result['total'][$ids[$i - 1]]["{$what}_clean"] == 0) {
+                            if ((float)$result['total'][$projectID]["{$what}_clean"] == 0) {
+                                $result['total'][$projectID]["percent_{$what}"] = "0%";
+                            }
+                            else {
+                                $result['total'][$projectID]["percent_{$what}"] = "100%";
+                            }
+                        } else {
+                            $result['total'][$projectID]["percent_{$what}"] = round((((float)$result['total'][$projectID]["{$what}_clean"] / (float)$result['total'][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
                         }
                     }
                 }
