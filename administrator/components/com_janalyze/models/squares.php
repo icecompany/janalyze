@@ -73,25 +73,104 @@ class JanalyzeModelSquares extends ListModel
                 ],
             ],
             2 => [
-                1 => 'Экспоместо в павильоне',
+                'pavilion' => [
+                    1 => 'Экспоместо в павильоне',
+                    2 => 'Экспоместо в павильоне (премиум)',
+                ],
+                'street' => [
+                    3 => 'Экспоместо на улице',
+                ],
             ],
         ];
 
         $result = ['projects' => [], 'types' => $square_types[$this->familyID], 'data' => [], 'total' => []];
         foreach ($items as $item) {
             if (!isset($result['projects'][$item->projectID])) $result['projects'][$item->projectID] = $item->project;
+        }
+        foreach ($items as $item) {
             $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
             $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
-            $result['data'][$types[$item->square_type]][$item->square_type][$item->projectID] = ['square' => $square, 'money' => $money];
-            if (!isset($result['total'][$types[$item->square_type]][$item->projectID])) $result['total'][$types[$item->square_type]][$item->projectID] = ['square' => 0, 'money' => 0];
+
+            if (!isset($result['data'][$types[$item->square_type]][$item->square_type])) {
+                foreach($result['projects'] as $projectID => $title) {
+                    $result['data'][$types[$item->square_type]][$item->square_type][$projectID] = [
+                        'square_clean' => (float)0,
+                        'money_clean' => (float)0,
+                        'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
+                        'money' => JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format(0, 2, ',', ' ')),
+                        'percent_square' => "0%",
+                        'percent_money' => "0%",
+                    ];
+                }
+            }
+
+            $result['data'][$types[$item->square_type]][$item->square_type][$item->projectID] = [
+                'square_clean' => (float) $item->square,
+                'money_clean' => (float) $item->money,
+                'square' => $square,
+                'money' => $money,
+                'percent_square' => "0%",
+                'percent_money' => "0%",
+            ];
+
+            if (!isset($result['total'][$types[$item->square_type]][$item->projectID])) $result['total'][$types[$item->square_type]][$item->projectID] = [
+                'square' => 0,
+                'money' => 0,
+                'square_clean' => 0,
+                'money_clean' => 0,
+            ];
             $result['total'][$types[$item->square_type]][$item->projectID]['square'] += $item->square;
+            $result['total'][$types[$item->square_type]][$item->projectID]['square_clean'] += $item->square;
             $result['total'][$types[$item->square_type]][$item->projectID]['money'] += $item->money;
+            $result['total'][$types[$item->square_type]][$item->projectID]['money_clean'] += $item->money;
         }
         if (!$this->export) {
             foreach (['pavilion', 'street'] as $type) {
                 foreach (array_keys($result['projects']) as $projectID) {
                     $result['total'][$type][$projectID]['square'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float)$result['total'][$type][$projectID]['square'], 2, ',', ' '));
                     $result['total'][$type][$projectID]['money'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float)$result['total'][$type][$projectID]['money'], 2, ',', ' '));
+                }
+            }
+        }
+        $ids = [];
+        $i = 0;
+        foreach (array_keys($result['projects']) as $projectID) {
+            $ids[$i] = $projectID;
+            $i++;
+        }
+        foreach (['pavilion', 'street'] as $global_type) {
+            foreach (['square', 'money'] as $what) {
+                foreach ($ids as $i => $projectID) {
+                    foreach ($result['data'][$global_type] as $tip => $company) {
+                        if (!is_null($ids[$i - 1])) {
+
+                            if ($result['data'][$global_type][$tip][$ids[$i - 1]]["{$what}_clean"] == 0) {
+                                if ((float)$result['data'][$global_type][$tip][$projectID]["{$what}_clean"] == 0) {
+                                    $result['data'][$global_type][$tip][$projectID]["percent_{$what}"] = "0%";
+                                }
+                                else {
+                                    $result['data'][$global_type][$tip][$projectID]["percent_{$what}"] = "100%";
+                                }
+                            } else {
+                                $result['data'][$global_type][$tip][$projectID]["percent_{$what}"] = round((((float)$result['data'][$global_type][$tip][$projectID]["{$what}_clean"] / (float)$result['data'][$global_type][$tip][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
+                            }
+                        }
+                    }
+                }
+                foreach ($result['total'][$global_type] as $prj => $company) {
+                    if (!is_null($ids[$i - 1])) {
+
+                        if ($result['total'][$global_type][$ids[$i - 1]]["{$what}_clean"] == 0) {
+                            if ((float)$result['total'][$global_type][$prj]["{$what}_clean"] == 0) {
+                                $result['total'][$global_type][$prj]["percent_{$what}"] = "0%";
+                            }
+                            else {
+                                $result['total'][$global_type][$prj]["percent_{$what}"] = "100%";
+                            }
+                        } else {
+                            $result['total'][$global_type][$prj]["percent_{$what}"] = round((((float)$result['total'][$global_type][$prj]["{$what}_clean"] / (float)$result['total'][$global_type][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
+                        }
+                    }
                 }
             }
         }
