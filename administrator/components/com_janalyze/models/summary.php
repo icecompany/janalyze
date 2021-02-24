@@ -73,10 +73,36 @@ class JanalyzeModelSummary extends ListModel
         $result = ['projects' => [], 'types' => $types, 'data' => [], 'total' => []];
         foreach ($items as $item) {
             if (!isset($result['projects'][$item->projectID])) $result['projects'][$item->projectID] = $item->project;
+        }
+        foreach ($items as $item) {
             $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
             $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
-            $result['data'][$item->tip][$item->projectID] = ['square' => $square, 'money' => $money];
-            if (!isset($result['total'][$item->projectID])) $result['total'][$item->projectID] = ['square' => 0, 'money' => 0];
+            if (!isset($result['data'][$item->tip])) {
+                foreach($result['projects'] as $projectID => $title) {
+                    $result['data'][$item->tip][$projectID] = [
+                        'square_clean' => (float)0,
+                        'money_clean' => (float)0,
+                        'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
+                        'money' => JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format(0, 2, ',', ' ')),
+                        'percent_square' => "0%",
+                        'percent_money' => "0%",
+                    ];
+                }
+            }
+            $result['data'][$item->tip][$item->projectID] = [
+                'square_clean' => (float) $item->square,
+                'money_clean' => (float) $item->money,
+                'square' => $square,
+                'money' => $money,
+                'percent_square' => "0%",
+                'percent_money' => "0%",
+            ];
+            if (!isset($result['total'][$item->projectID])) $result['total'][$item->projectID] = [
+                'square' => $square,
+                'percent_square' => "0%",
+                'money' => $money,
+                'percent_money' => "0%",
+            ];
             $result['total'][$item->projectID]['square'] += $item->square;
             $result['total'][$item->projectID]['money'] += $item->money;
         }
@@ -84,6 +110,31 @@ class JanalyzeModelSummary extends ListModel
             foreach (array_keys($result['total']) as $projectID) {
                 $result['total'][$projectID]['square'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $result['total'][$projectID]['square'], 2, ',', ' '));
                 $result['total'][$projectID]['money'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $result['total'][$projectID]['money'], 2, ',', ' '));
+            }
+        }
+        $ids = [];
+        $i = 0;
+        foreach (array_keys($result['projects']) as $projectID) {
+            $ids[$i] = $projectID;
+            $i++;
+        }
+        foreach (['square', 'money'] as $what) {
+            foreach ($ids as $i => $projectID) {
+                foreach ($result['data'] as $tip => $company) {
+                    if (!is_null($ids[$i - 1])) {
+
+                        if ($result['data'][$tip][$ids[$i - 1]]["{$what}_clean"] == 0) {
+                            if ((float)$result['data'][$tip][$projectID]["{$what}_clean"] == 0) {
+                                $result['data'][$tip][$projectID]["percent_{$what}"] = "0%";
+                            }
+                            else {
+                                $result['data'][$tip][$projectID]["percent_{$what}"] = "100%";
+                            }
+                        } else {
+                            $result['data'][$tip][$projectID]["percent_{$what}"] = round((((float)$result['data'][$tip][$projectID]["{$what}_clean"] / (float)$result['data'][$tip][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
+                        }
+                    }
+                }
             }
         }
         return $result;
