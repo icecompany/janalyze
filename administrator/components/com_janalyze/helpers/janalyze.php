@@ -39,4 +39,26 @@ class JanalyzeHelper
 			$vName === 'janalyzes'
 		);
 	}
+
+    public static function getAllProjects(int $familyID, array $projectID = []): array
+    {
+        $db = JFactory::getDbo();
+        $query = $db->getQuery(true);
+        $query
+            ->select("id, title")
+            ->from("#__mkv_projects");
+        if (!empty($projectID)) {
+            $ids = implode(', ', $projectID);
+            if (!empty($ids)) $query->where("id in ({$ids})");
+        }
+        else {
+            $query->where("familyID = {$db->q($familyID)}");
+        }
+        $items = $db->setQuery($query)->loadObjectList();
+        $result = [];
+        foreach ($items as $item) {
+            $result[$item->id] = $item->title;
+        }
+        return $result;
+	}
 }

@@ -15,7 +15,7 @@ class JanalyzeModelSummary extends ListModel
 		}
 
 		$this->familyID = $config['familyID'] ?? null;
-		$this->excludeID = $config['excludeID'] ?? null;
+		$this->projectID = $config['projectID'] ?? null;
 		$this->export = $config['export'] ?? false;
 		$this->floor = $config['floor'] ?? false;
 
@@ -43,15 +43,17 @@ class JanalyzeModelSummary extends ListModel
 		$floor = (!$this->floor) ? 'not' : '';
 		$query->where("pi.square_type {$floor} in (7, 8)");
 
-		if (is_numeric($this->familyID)) $query->where("p.familyID = {$db->q($this->familyID)}");
-		if (!empty($this->excludeID)) {
-		    if (is_numeric($this->excludeID)) {
-		        $query->where("c.projectID != {$db->q($this->excludeID)}");
+        if (!empty($this->projectID)) {
+            if (is_numeric($this->projectID)) {
+                $query->where("c.projectID = {$db->q($this->projectID)}");
             }
-		    if (is_array($this->excludeID)) {
-		        $exclude = implode(', ', $this->excludeID);
-		        if (!empty($exclude)) $query->where("c.projectID not in ({$exclude})");
+            if (is_array($this->projectID)) {
+                $project = implode(', ', $this->projectID);
+                if (!empty($project)) $query->where("c.projectID in ({$project})");
             }
+        }
+        else {
+            $query->where("p.familyID = {$db->q($this->familyID)}");
         }
 
         $this->setState('list.limit', 0);
@@ -70,25 +72,22 @@ class JanalyzeModelSummary extends ListModel
             $types['non_commercial'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_NON_COMMERCIAL');
             unset($types['2th_floor']);
         }
-        $result = ['projects' => [], 'types' => $types, 'data' => [], 'total' => []];
-        foreach ($items as $item) {
-            if (!isset($result['projects'][$item->projectID])) $result['projects'][$item->projectID] = $item->project;
+        $result = ['projects' => JanalyzeHelper::getAllProjects($this->familyID, $this->projectID ?? []), 'types' => $types, 'data' => [], 'total' => []];
+        foreach (array_keys($result['projects']) as $projectID) {
+            foreach (array_keys($types) as $type) {
+                $result['data'][$type][$projectID] = [
+                    'square_clean' => (float)0,
+                    'money_clean' => (float)0,
+                    'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
+                    'money' => JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format(0, 2, ',', ' ')),
+                    'percent_square' => "0%",
+                    'percent_money' => "0%",
+                ];
+            }
         }
         foreach ($items as $item) {
             $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
             $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
-            if (!isset($result['data'][$item->tip])) {
-                foreach($result['projects'] as $projectID => $title) {
-                    $result['data'][$item->tip][$projectID] = [
-                        'square_clean' => (float)0,
-                        'money_clean' => (float)0,
-                        'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
-                        'money' => JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format(0, 2, ',', ' ')),
-                        'percent_square' => "0%",
-                        'percent_money' => "0%",
-                    ];
-                }
-            }
             $result['data'][$item->tip][$item->projectID] = [
                 'square_clean' => (float) $item->square,
                 'money_clean' => (float) $item->money,
@@ -157,5 +156,5 @@ class JanalyzeModelSummary extends ListModel
         return $result;
     }
 
-    private $familyID, $excludeID, $floor, $export;
+    private $familyID, $projectID, $floor, $export;
 }

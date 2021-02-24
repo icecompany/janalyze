@@ -13,11 +13,11 @@ class JanalyzeModelTypes extends ListModel
             ];
         }
 
-        $this->familyID = $config['familyID'] ?? null;
-        $this->excludeID = $config['excludeID'] ?? null;
         $this->export = $config['export'] ?? false;
         $this->square = $config['square_type'] ?? false;
         $this->commercial = $config['commercial'] ?? false;
+        $this->projectID = $config['projectID'] ?? false;
+        $this->familyID = $config['familyID'] ?? false;
 
         parent::__construct($config);
     }
@@ -60,16 +60,17 @@ class JanalyzeModelTypes extends ListModel
             }
         }
 
-        if (is_numeric($this->familyID)) $query->where("p.familyID = {$db->q($this->familyID)}");
-
-        if (!empty($this->excludeID)) {
-            if (is_numeric($this->excludeID)) {
-                $query->where("c.projectID != {$db->q($this->excludeID)}");
+        if (!empty($this->projectID)) {
+            if (is_numeric($this->projectID)) {
+                $query->where("c.projectID = {$db->q($this->projectID)}");
             }
-            if (is_array($this->excludeID)) {
-                $exclude = implode(', ', $this->excludeID);
-                if (!empty($exclude)) $query->where("c.projectID not in ({$exclude})");
+            if (is_array($this->projectID)) {
+                $project = implode(', ', $this->projectID);
+                if (!empty($project)) $query->where("c.projectID in ({$project})");
             }
+        }
+        else {
+            $query->where("p.familyID = {$db->q($this->familyID)}");
         }
 
         $this->setState('list.limit', 0);
@@ -81,10 +82,7 @@ class JanalyzeModelTypes extends ListModel
     {
         $items = parent::getItems();
 
-        $result = ['projects' => [], 'companies' => [], 'data' => [], 'total' => []];
-        foreach ($items as $item) {
-            if (!isset($result['projects'][$item->projectID])) $result['projects'][(string)$item->projectID] = $item->project;
-        }
+        $result = ['projects' => JanalyzeHelper::getAllProjects($this->familyID, $this->projectID ?? []), 'companies' => [], 'data' => [], 'total' => []];
         foreach ($items as $item) {
             $item->companyID = $item->companyID . " ";
             if (!isset($result['companies'][$item->companyID])) $result['companies'][$item->companyID] = $item->company;
@@ -166,5 +164,5 @@ class JanalyzeModelTypes extends ListModel
         return $result;
     }
 
-    private $familyID, $excludeID, $export, $square, $commercial;
+    private $projectID, $familyID, $export, $square, $commercial;
 }

@@ -15,7 +15,7 @@ class JanalyzeModelSquares extends ListModel
 		}
 
 		$this->familyID = $config['familyID'] ?? null;
-		$this->excludeID = $config['excludeID'] ?? null;
+		$this->projectID = $config['projectID'] ?? null;
 		$this->export = $config['export'] ?? false;
 
 		parent::__construct($config);
@@ -39,15 +39,17 @@ class JanalyzeModelSquares extends ListModel
             ->group("c.projectID, pi.square_type")
             ->order("c.projectID, pi.square_type");
 
-		if (is_numeric($this->familyID)) $query->where("p.familyID = {$db->q($this->familyID)}");
-		if (!empty($this->excludeID)) {
-		    if (is_numeric($this->excludeID)) {
-		        $query->where("c.projectID != {$db->q($this->excludeID)}");
+        if (!empty($this->projectID)) {
+            if (is_numeric($this->projectID)) {
+                $query->where("c.projectID = {$db->q($this->projectID)}");
             }
-		    if (is_array($this->excludeID)) {
-		        $exclude = implode(', ', $this->excludeID);
-		        if (!empty($exclude)) $query->where("c.projectID not in ({$exclude})");
+            if (is_array($this->projectID)) {
+                $project = implode(', ', $this->projectID);
+                if (!empty($project)) $query->where("c.projectID in ({$project})");
             }
+        }
+        else {
+            $query->where("p.familyID = {$db->q($this->familyID)}");
         }
 
 		$this->setState('list.limit', 0);
@@ -83,17 +85,11 @@ class JanalyzeModelSquares extends ListModel
             ],
         ];
 
-        $result = ['projects' => [], 'types' => $square_types[$this->familyID], 'data' => [], 'total' => []];
-        foreach ($items as $item) {
-            if (!isset($result['projects'][$item->projectID])) $result['projects'][$item->projectID] = $item->project;
-        }
-        foreach ($items as $item) {
-            $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
-            $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
-
-            if (!isset($result['data'][$types[$item->square_type]][$item->square_type])) {
-                foreach($result['projects'] as $projectID => $title) {
-                    $result['data'][$types[$item->square_type]][$item->square_type][$projectID] = [
+        $result = ['projects' => JanalyzeHelper::getAllProjects($this->familyID, $this->projectID ?? []), 'types' => $square_types[$this->familyID], 'data' => [], 'total' => []];
+        foreach (array_keys($result['projects']) as $projectID) {
+            foreach (array_keys($result['types']) as $type) {
+                foreach (array_keys($result[$type]) as $square_type) {
+                    $result['data'][$type][$square_type][$projectID] = [
                         'square_clean' => (float)0,
                         'money_clean' => (float)0,
                         'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
@@ -103,6 +99,10 @@ class JanalyzeModelSquares extends ListModel
                     ];
                 }
             }
+        }
+        foreach ($items as $item) {
+            $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
+            $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
 
             $result['data'][$types[$item->square_type]][$item->square_type][$item->projectID] = [
                 'square_clean' => (float) $item->square,
@@ -177,5 +177,5 @@ class JanalyzeModelSquares extends ListModel
         return $result;
     }
 
-    private $familyID, $excludeID, $export;
+    private $projectID, $familyID, $export;
 }
