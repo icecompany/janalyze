@@ -19,20 +19,14 @@ class JanalyzeModelItems extends ListModel
         $this->export = $config['export'] ?? false;
         $this->values = [
             'with_percents' => [
-                'values' => [
-                    'square' => 0,
-                    'money' => 0,
-                ],
-                'percents' => [
-                    'square' => 0,
-                    'money' => 0,
-                ]
+                'square' => 0,
+                'money' => 0,
+                'percent_square' => 0,
+                'percent_money' => 0,
             ],
             'without_percents' => [
-                'values' => [
-                    'square' => 0,
-                    'money' => 0,
-                ],
+                'square' => 0,
+                'money' => 0,
             ]
         ];
         $this->places = [
@@ -104,6 +98,43 @@ class JanalyzeModelItems extends ListModel
     {
         $items = parent::getItems();
         $result = $this->init($items);
+        foreach ($items as $item) {
+            $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] = (float) $item->square;
+            $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] = (float) $item->money;
+            $result['total']['by_companies'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] += (float) $item->square;
+            $result['total']['by_companies'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] += (float) $item->money;
+            $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] += (float) $item->square;
+            $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] += (float) $item->money;
+        }
+        $result = $this->unsetEmptyCompanies($result);
+
+        return $result;
+    }
+
+    private function unsetEmptyCompanies($result = []): array
+    {
+        if (empty($result)) return [];
+        $total = [];
+        foreach ($result['companies'] as $companyID => $company) {
+            if (!isset($total[$companyID])) {
+                foreach (array_keys($result->values['without_percents']) as $what) {
+                    $total[$companyID][$what] = 0;
+                }
+            }
+        }
+        foreach ($result['companies'] as $companyID => $company) {
+            foreach ($result['projects'] as $projectID => $project) {
+                foreach ($result['places'] as $placeID => $place) {
+                    foreach ($result['finance_types'] as $finance_typeID => $finance_type) {
+                        foreach ($result['square_types'] as $square_typeID => $square_type) {
+                            if ($result['total']['by_companies'][$companyID][$projectID][$placeID][$finance_typeID][$square_typeID]['money'] == 0 && $result['total']['by_companies'][$companyID][$projectID][$placeID][$finance_typeID][$square_typeID]['square'] == 0) {
+                                //unset($result['data'][$companyID][$projectID][$placeID][$finance_typeID][$square_typeID]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         return $result;
     }
 
@@ -117,20 +148,21 @@ class JanalyzeModelItems extends ListModel
             'square_types' => $this->square_types,
             'structure' => $this->getStructure(),
             'data' => [],
-            'total' => []
+            'total' => ['by_squares' => []]
         ];
-	    $structure_for_data = $this->getStructure(true);
         foreach ($result['companies'] as $companyID => $company) {
             $i = 0;
             foreach ($result['projects'] as $projectID => $project) {
+                $structure_for_data = $this->getStructure(true, $i);
                 $result['data'][$companyID][$projectID] = $structure_for_data;
+                $result['total']['by_squares'][$projectID] = $structure_for_data;
                 $i++;
             }
         }
         return $result;
     }
 
-    private function getStructure($for_data = false): array
+    private function getStructure($for_data = false, $i = 0): array
     {
         $result = [];
         foreach (array_keys($this->places) as $place) {
@@ -141,7 +173,7 @@ class JanalyzeModelItems extends ListModel
                         $result[$place][$finance_type][] = $square_type;
                     }
                     else {
-                        $result[$place][$finance_type][$square_type] = $this->values['with_percents'];
+                        $result[$place][$finance_type][$square_type] = $this->values[($i > 0) ? 'with_percents' : 'without_percents'];
                     }
                 }
             }
