@@ -62,7 +62,7 @@ class JanalyzeModelItems extends ListModel
             ->select("c.projectID, p.title as project")
             ->select("if (pi.square_type in (1, 2, 5, 9), 'pavilion', if(pi.square_type in (3, 4, 6), 'street', if (pi.square_type in (7, 8), '2th_floor', 'other'))) as place")
             ->select("if (c.status = 9, 'non_commerce', 'commerce') as finance_type")
-            ->select("if (c.is_sponsor = 1, 'sponsor', if (c.status = 9, 'non_commerce', pi.square_type)) as object_type")
+            ->select("if (c.is_sponsor = 1, 'sponsor', pi.square_type) as object_type")
             ->select("c.companyID, e.title as company")
             ->select("ifnull(sum(ci.value),0) as square")
             ->select("ifnull(sum(if(c.currency = 'usd', ci.amount * p.course_usd, if(c.currency = 'eur', ci.amount * p.course_eur, ci.amount))),0) as money")
@@ -101,8 +101,8 @@ class JanalyzeModelItems extends ListModel
         foreach ($items as $item) {
             $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] = (float) $item->square;
             $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] = (float) $item->money;
-            $result['total']['by_companies'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] += (float) $item->square;
-            $result['total']['by_companies'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] += (float) $item->money;
+            $result['total']['by_companies'][$item->companyID][$item->place][$item->finance_type][$item->object_type]['square'] += (float) $item->square;
+            $result['total']['by_companies'][$item->companyID][$item->place][$item->finance_type][$item->object_type]['money'] += (float) $item->money;
             $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] += (float) $item->square;
             $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] += (float) $item->money;
         }
@@ -155,6 +155,7 @@ class JanalyzeModelItems extends ListModel
             foreach ($result['projects'] as $projectID => $project) {
                 $structure_for_data = $this->getStructure(true, $i);
                 $result['data'][$companyID][$projectID] = $structure_for_data;
+                $result['total']['by_companies'][$companyID] = $structure_for_data;
                 $result['total']['by_squares'][$projectID] = $structure_for_data;
                 $i++;
             }
