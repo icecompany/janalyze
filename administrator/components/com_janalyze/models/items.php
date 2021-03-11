@@ -5,14 +5,13 @@ use Joomla\CMS\MVC\Model\ListModel;
 
 class JanalyzeModelItems extends ListModel
 {
-	public function __construct($config = [])
-	{
-		if (empty($config['filter_fields']))
-		{
-			$config['filter_fields'] = [
-				'id',
-			];
-		}
+    public function __construct($config = [])
+    {
+        if (empty($config['filter_fields'])) {
+            $config['filter_fields'] = [
+                'id',
+            ];
+        }
 
         $this->familyID = $config['familyID'] ?? null;
         $this->projectID = $config['projectID'] ?? null;
@@ -51,10 +50,10 @@ class JanalyzeModelItems extends ListModel
             'sponsor' => 'Спонсорская',
         ];
 
-		parent::__construct($config);
-	}
+        parent::__construct($config);
+    }
 
-	protected function _getListQuery()
+    protected function _getListQuery()
     {
         $db = JFactory::getDbo();
         $query = $db->getQuery(true);
@@ -84,8 +83,7 @@ class JanalyzeModelItems extends ListModel
                 $project = implode(', ', $this->projectID);
                 if (!empty($project)) $query->where("c.projectID in ({$project})");
             }
-        }
-        else {
+        } else {
             $query->where("p.familyID = {$db->q($this->familyID)}");
         }
 
@@ -99,12 +97,16 @@ class JanalyzeModelItems extends ListModel
         $items = parent::getItems();
         $result = $this->init($items);
         foreach ($items as $item) {
-            $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] = (float) $item->square;
-            $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] = (float) $item->money;
-            $result['total']['by_companies'][$item->companyID][$item->place][$item->finance_type][$item->object_type]['square'] += (float) $item->square;
-            $result['total']['by_companies'][$item->companyID][$item->place][$item->finance_type][$item->object_type]['money'] += (float) $item->money;
-            $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] += (float) $item->square;
-            $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] += (float) $item->money;
+            $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] = (float)$item->square;
+            $result['data'][$item->companyID][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] = (float)$item->money;
+            $result['total']['by_companies'][$item->companyID][$item->place][$item->finance_type][$item->object_type]['square'] += (float)$item->square;
+            $result['total']['by_companies'][$item->companyID][$item->place][$item->finance_type][$item->object_type]['money'] += (float)$item->money;
+            $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['square'] += (float)$item->square;
+            $result['total']['by_squares'][$item->projectID][$item->place][$item->finance_type][$item->object_type]['money'] += (float)$item->money;
+            $result['total']['by_finance_types'][$item->projectID][$item->place][$item->finance_type]['square'] += (float)$item->square;
+            $result['total']['by_finance_types'][$item->projectID][$item->place][$item->finance_type]['money'] += (float)$item->money;
+            $result['total']['by_places'][$item->projectID][$item->place]['square'] += (float)$item->square;
+            $result['total']['by_places'][$item->projectID][$item->place]['money'] += (float)$item->money;
         }
         $result = $this->getDynamic($result);
 
@@ -123,23 +125,26 @@ class JanalyzeModelItems extends ListModel
                         foreach ($result['square_types'] as $square_type_id => $square_type) {
                             foreach (['square', 'money'] as $what) {
                                 if (!isset($result['data'][$companyID][$projects[$i]][$place_id][$finance_type_id][$square_type_id][$what])) continue;
-                                $dynamic = $this->dynamic((float) $result['data'][$companyID][$projects[$i-1]][$place_id][$finance_type_id][$square_type_id][$what], (float) $result['data'][$companyID][$projects[$i]][$place_id][$finance_type_id][$square_type_id][$what]);
+                                $dynamic = $this->dynamic((float)$result['data'][$companyID][$projects[$i - 1]][$place_id][$finance_type_id][$square_type_id][$what], (float)$result['data'][$companyID][$projects[$i]][$place_id][$finance_type_id][$square_type_id][$what]);
                                 $result['data'][$companyID][$projects[$i]][$place_id][$finance_type_id][$square_type_id]["percent_{$what}"] = $dynamic;
                             }
                         }
                     }
                 }
             }
-            foreach ($result['places'] as $place_id => $place) {
-                foreach ($result['finance_types'] as $finance_type_id => $finance_type) {
-                    foreach ($result['square_types'] as $square_type_id => $square_type) {
-                        foreach (['square', 'money'] as $what) {
+            foreach (['square', 'money'] as $what) {
+                foreach ($result['places'] as $place_id => $place) {
+                    foreach ($result['finance_types'] as $finance_type_id => $finance_type) {
+                        foreach ($result['square_types'] as $square_type_id => $square_type) {
                             if (!isset($result['total']['by_squares'][$projects[$i]][$place_id][$finance_type_id][$square_type_id][$what])) continue;
-                            //exit(var_dump($result['total']['by_squares'][$projects[$i-1]][$place_id][$finance_type_id][$square_type_id][$what], $result['total']['by_squares'][$projects[$i]][$place_id][$finance_type_id][$square_type_id][$what]));
-                            $dynamic = $this->dynamic((float) $result['total']['by_squares'][$projects[$i-1]][$place_id][$finance_type_id][$square_type_id][$what], (float) $result['total']['by_squares'][$projects[$i]][$place_id][$finance_type_id][$square_type_id][$what]);
+                            $dynamic = $this->dynamic((float)$result['total']['by_squares'][$projects[$i - 1]][$place_id][$finance_type_id][$square_type_id][$what], (float)$result['total']['by_squares'][$projects[$i]][$place_id][$finance_type_id][$square_type_id][$what]);
                             $result['total']['by_squares'][$projects[$i]][$place_id][$finance_type_id][$square_type_id]["percent_{$what}"] = $dynamic;
                         }
+                        $dynamic = $this->dynamic((float)$result['total']['by_finance_types'][$projects[$i - 1]][$place_id][$finance_type_id][$what], (float)$result['total']['by_finance_types'][$projects[$i]][$place_id][$finance_type_id][$what]);
+                        $result['total']['by_finance_types'][$projects[$i]][$place_id][$finance_type_id]["percent_{$what}"] = $dynamic;
                     }
+                    $dynamic = $this->dynamic((float)$result['total']['by_places'][$projects[$i - 1]][$place_id][$what], (float)$result['total']['by_places'][$projects[$i]][$place_id][$what]);
+                    $result['total']['by_places'][$projects[$i]][$place_id]["percent_{$what}"] = $dynamic;
                 }
             }
         }
@@ -150,8 +155,7 @@ class JanalyzeModelItems extends ListModel
     {
         if ($previous == 0) {
             return ($current == 0) ? 0 : 100;
-        }
-        else {
+        } else {
             $result = $current / $previous;
         }
         return round($result * 100 - 100);
@@ -159,15 +163,15 @@ class JanalyzeModelItems extends ListModel
 
     private function init($items): array
     {
-	    $result = [
-	        'companies' => $this->listOfCompanies($items),
+        $result = [
+            'companies' => $this->listOfCompanies($items),
             'projects' => JanalyzeHelper::getAllProjects($this->familyID, $this->projectID ?? []),
             'places' => $this->places,
             'finance_types' => $this->finance_types,
             'square_types' => $this->square_types,
             'structure' => $this->getStructure(),
             'data' => [],
-            'total' => ['by_squares' => [], 'by_companies' => []]
+            'total' => ['by_squares' => [], 'by_companies' => [], 'by_finance_types' => [], 'by_places' => []]
         ];
         foreach ($result['companies'] as $companyID => $company) {
             $i = 0;
@@ -176,7 +180,29 @@ class JanalyzeModelItems extends ListModel
                 $result['data'][$companyID][$projectID] = $structure_for_data;
                 $result['total']['by_companies'][$companyID] = $structure_for_data;
                 $result['total']['by_squares'][$projectID] = $structure_for_data;
+                $result['total']['by_finance_types'][$projectID] = $this->getFinanceStructure($i);
+                $result['total']['by_places'][$projectID] = $this->getPlaceStructure($i);
                 $i++;
+            }
+        }
+        return $result;
+    }
+
+    private function getPlaceStructure($i = 0): array
+    {
+        $result = [];
+        foreach (array_keys($this->places) as $place) {
+            $result[$place] = $this->values[($i > 0) ? 'with_percents' : 'without_percents'];
+        }
+        return $result;
+    }
+
+    private function getFinanceStructure($i = 0): array
+    {
+        $result = [];
+        foreach (array_keys($this->places) as $place) {
+            foreach (array_keys($this->finance_types) as $finance_type) {
+                $result[$place][$finance_type] = $this->values[($i > 0) ? 'with_percents' : 'without_percents'];
             }
         }
         return $result;
@@ -191,8 +217,7 @@ class JanalyzeModelItems extends ListModel
                     if ($this->is_continue($place, $finance_type, $square_type)) continue;
                     if (!$for_data) {
                         $result[$place][$finance_type][] = $square_type;
-                    }
-                    else {
+                    } else {
                         $result[$place][$finance_type][$square_type] = $this->values[($i > 0) ? 'with_percents' : 'without_percents'];
                     }
                 }
@@ -221,8 +246,8 @@ class JanalyzeModelItems extends ListModel
 
     private function listOfCompanies(array $items): array
     {
-	    $result = [];
-	    if (empty($items)) return $result;
+        $result = [];
+        if (empty($items)) return $result;
         foreach ($items as $item) {
             if (!isset($result[$item->companyID])) $result[$item->companyID] = $item->company;
         }
@@ -230,9 +255,9 @@ class JanalyzeModelItems extends ListModel
     }
 
     protected function populateState($ordering = null, $direction = null)
-	{
-		parent::populateState($ordering, $direction);
-	}
+    {
+        parent::populateState($ordering, $direction);
+    }
 
     private $familyID, $projectID, $values, $export, $places, $finance_types, $square_types;
 }

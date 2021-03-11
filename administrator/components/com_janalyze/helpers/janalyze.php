@@ -40,12 +40,17 @@ class JanalyzeHelper
 		);
 	}
 
+    public function getCourse()
+    {
+
+	}
+
     public static function getAllProjects(int $familyID, array $projectID = []): array
     {
         $db = JFactory::getDbo();
         $query = $db->getQuery(true);
         $query
-            ->select("id, title")
+            ->select("id, title, course_usd, course_eur")
             ->from("#__mkv_projects");
         if (!empty($projectID)) {
             $ids = implode(', ', $projectID);
@@ -57,7 +62,11 @@ class JanalyzeHelper
         $items = $db->setQuery($query)->loadObjectList();
         $result = [];
         foreach ($items as $item) {
-            $result[$item->id] = $item->title;
+            $arr = [];
+            $arr['title'] = $item->title;
+            $arr['course']['usd'] = $item->course_usd;
+            $arr['course']['eur'] = $item->course_eur;
+            $result[$item->id] = $arr;
         }
         return $result;
 	}
