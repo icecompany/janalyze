@@ -1,5 +1,6 @@
 <?php
 defined('_JEXEC') or die;
+header("Access-Control-Allow-Origin: https://{$_SERVER['HTTP_HOST']}");
 use Joomla\CMS\Response\JsonResponse;
 use Joomla\CMS\MVC\Controller\AdminController;
 
