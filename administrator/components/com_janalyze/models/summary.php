@@ -30,7 +30,7 @@ class JanalyzeModelSummary extends ListModel
 		$db = $this->getDbo();
 		$query = $db->getQuery(true);
 		$query
-            ->select("distinct s.pavilionID, pv.title as pavilion, c.projectID, p.title as project, p.familyID, f.title as family")
+            ->select("distinct s.pavilionID, pv.title as pavilion, c.projectID, p.title as project, p.familyID, f.title as family, ifnull(p.title_short, p.title) as project_short_title")
             ->from($db->qn('#__mkv_stands') . ' s')
             ->leftJoin($db->qn('#__mkv_stand_pavilions') . ' pv on s.pavilionID = pv.id')
             ->leftJoin($db->qn('#__mkv_contract_stands') . ' cs on s.id = cs.standID')
@@ -52,7 +52,7 @@ class JanalyzeModelSummary extends ListModel
 
         foreach ($items as $item) {
             if (!isset($result[$item->familyID])) $result[$item->familyID] = ['title' => $item->family, 'projects' => [], 'pavilions' => []];
-            if (!isset($result[$item->familyID]['projects'][$item->projectID])) $result[$item->familyID]['projects'][$item->projectID] = ['title' => $item->project, 'checked' => $this->checked[$item->projectID]];
+            if (!isset($result[$item->familyID]['projects'][$item->projectID])) $result[$item->familyID]['projects'][$item->projectID] = ['title' => $item->project, 'title_short' => $item->project_short_title, 'checked' => $this->checked[$item->projectID]];
             if (!isset($result[$item->familyID]['pavilions'][$item->pavilionID])) $result[$item->familyID]['pavilions'][$item->pavilionID] = ['title' => $item->pavilion];
         }
 

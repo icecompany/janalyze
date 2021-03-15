@@ -50,7 +50,7 @@ class JanalyzeHelper
         $db = JFactory::getDbo();
         $query = $db->getQuery(true);
         $query
-            ->select("id, title, course_usd, course_eur")
+            ->select("id, title, course_usd, course_eur, ifnull(title_short, title) as short_title")
             ->from("#__mkv_projects");
         if (!empty($projectID)) {
             $ids = implode(', ', $projectID);
@@ -64,6 +64,7 @@ class JanalyzeHelper
         foreach ($items as $item) {
             $arr = [];
             $arr['title'] = $item->title;
+            $arr['title_short'] = $item->short_title;
             $arr['course']['usd'] = $item->course_usd;
             $arr['course']['eur'] = $item->course_eur;
             $result[$item->id] = $arr;
