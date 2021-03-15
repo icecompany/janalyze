@@ -10,16 +10,19 @@ class JanalyzeModelSummary extends ListModel
 		if (empty($config['filter_fields']))
 		{
 			$config['filter_fields'] = [
-				'id',
+				's.id',
 			];
 		}
 
-		$this->familyID = $config['familyID'] ?? null;
-		$this->projectID = $config['projectID'] ?? null;
-		$this->export = $config['export'] ?? false;
-		$this->floor = $config['floor'] ?? false;
-
 		parent::__construct($config);
+
+		$this->checked = [
+		    '5' => false,
+            '11' => true,
+            '12' => true,
+            '6' => true,
+            '30' => true,
+        ];
 	}
 
 	protected function getListQuery()
@@ -27,34 +30,15 @@ class JanalyzeModelSummary extends ListModel
 		$db = $this->getDbo();
 		$query = $db->getQuery(true);
 		$query
-            ->select("c.projectID")
-            ->select("p.title as project")
-            ->select("if(c.status = 9, 'non_commercial', if(c.is_sponsor = 1, 'sponsor', if (pi.square_type in (1, 2, 5, 9), 'pavilion', if(pi.square_type in (3, 4, 6), 'street', if (pi.square_type in (7, 8), '2th_floor', 'other'))))) as tip")
-            ->select("ifnull(sum(ci.value),0) as square")
-            ->select("ifnull(sum(if(c.currency = 'usd', ci.amount * p.course_usd, if(c.currency = 'eur', ci.amount * p.course_eur, ci.amount))),0) as money")
-            ->from($db->qn('#__mkv_contract_items') . ' ci')
-            ->leftJoin($db->qn('#__mkv_price_items') . ' pi on ci.itemID = pi.id')
-            ->leftJoin($db->qn('s7vi9_mkv_contracts') . ' c on ci.contractID = c.id')
-            ->leftJoin($db->qn('s7vi9_mkv_projects') . ' p on c.projectID = p.id')
-            ->where("pi.square_type is not null")
-            ->group("c.projectID, tip")
-            ->order("c.projectID");
-
-		$floor = (!$this->floor) ? 'not' : '';
-		$query->where("pi.square_type {$floor} in (7, 8)");
-
-        if (!empty($this->projectID)) {
-            if (is_numeric($this->projectID)) {
-                $query->where("c.projectID = {$db->q($this->projectID)}");
-            }
-            if (is_array($this->projectID)) {
-                $project = implode(', ', $this->projectID);
-                if (!empty($project)) $query->where("c.projectID in ({$project})");
-            }
-        }
-        else {
-            $query->where("p.familyID = {$db->q($this->familyID)}");
-        }
+            ->select("distinct s.pavilionID, pv.title as pavilion, c.projectID, p.title as project, p.familyID, f.title as family")
+            ->from($db->qn('#__mkv_stands') . ' s')
+            ->leftJoin($db->qn('#__mkv_stand_pavilions') . ' pv on s.pavilionID = pv.id')
+            ->leftJoin($db->qn('#__mkv_contract_stands') . ' cs on s.id = cs.standID')
+            ->leftJoin($db->qn('#__mkv_contract_items') . ' ci on cs.id = ci.contractStandID')
+            ->leftJoin($db->qn('#__mkv_contracts') . ' c on ci.contractID = c.id')
+            ->leftJoin($db->qn('#__mkv_projects') . ' p on c.projectID = p.id')
+            ->leftJoin($db->qn('#__mkv_project_families') . ' f on p.familyID = f.id')
+            ->where("s.pavilionID is not null and c.projectID is not null");
 
         $this->setState('list.limit', 0);
 
@@ -64,97 +48,16 @@ class JanalyzeModelSummary extends ListModel
 	public function getItems()
     {
         $items = parent::getItems();
-        $types['2th_floor' ]= JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_2TH_FLOOR');
-        if (!$this->floor) {
-            $types['pavilion'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_PAVILION');
-            $types['street'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_STREET');
-            $types['sponsor'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_SPONSOR');
-            $types['non_commercial'] = JText::sprintf('COM_JANALYZE_SUMMARY_TYPE_NON_COMMERCIAL');
-            unset($types['2th_floor']);
-        }
-        $result = ['projects' => JanalyzeHelper::getAllProjects($this->familyID, $this->projectID ?? []), 'types' => $types, 'data' => [], 'total' => []];
-        foreach (array_keys($result['projects']) as $projectID) {
-            foreach (array_keys($types) as $type) {
-                $result['data'][$type][$projectID] = [
-                    'square_clean' => (float)0,
-                    'money_clean' => (float)0,
-                    'square' => ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format(0, 2, ',', ' ')),
-                    'money' => JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format(0, 2, ',', ' ')),
-                    'percent_square' => "0%",
-                    'percent_money' => "0%",
-                ];
-            }
-        }
+        $result = [];
+
         foreach ($items as $item) {
-            $square = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $item->square, 2, ',', ' '));
-            $money = ($this->export) ?: JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $item->money, 2, ',', ' '));
-            $result['data'][$item->tip][$item->projectID] = [
-                'square_clean' => (float) $item->square,
-                'money_clean' => (float) $item->money,
-                'square' => $square,
-                'money' => $money,
-                'percent_square' => "0%",
-                'percent_money' => "0%",
-            ];
-            if (!isset($result['total'][$item->projectID])) $result['total'][$item->projectID] = [
-                'square' => $square,
-                'percent_square' => "0%",
-                'money' => $money,
-                'percent_money' => "0%",
-            ];
-            $result['total'][$item->projectID]['square_clean'] += $item->square;
-            $result['total'][$item->projectID]['square'] += $item->square;
-            $result['total'][$item->projectID]['money'] += $item->money;
-            $result['total'][$item->projectID]['money_clean'] += $item->money;
+            if (!isset($result[$item->familyID])) $result[$item->familyID] = ['title' => $item->family, 'projects' => [], 'pavilions' => []];
+            if (!isset($result[$item->familyID]['projects'][$item->projectID])) $result[$item->familyID]['projects'][$item->projectID] = ['title' => $item->project, 'checked' => $this->checked[$item->projectID]];
+            if (!isset($result[$item->familyID]['pavilions'][$item->pavilionID])) $result[$item->familyID]['pavilions'][$item->pavilionID] = ['title' => $item->pavilion];
         }
-        if (!$this->export) {
-            foreach (array_keys($result['total']) as $projectID) {
-                $result['total'][$projectID]['square'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_SQM', number_format((float) $result['total'][$projectID]['square'], 2, ',', ' '));
-                $result['total'][$projectID]['money'] = JText::sprintf('COM_JANALYZE_HEAD_POSTFIX_RUB', number_format((float) $result['total'][$projectID]['money'], 2, ',', ' '));
-            }
-        }
-        $ids = [];
-        $i = 0;
-        foreach (array_keys($result['projects']) as $projectID) {
-            $ids[$i] = $projectID;
-            $i++;
-        }
-        foreach (['square', 'money'] as $what) {
-            foreach ($ids as $i => $projectID) {
-                foreach ($result['data'] as $tip => $company) {
-                    if (!is_null($ids[$i - 1])) {
 
-                        if ($result['data'][$tip][$ids[$i - 1]]["{$what}_clean"] == 0) {
-                            if ((float)$result['data'][$tip][$projectID]["{$what}_clean"] == 0) {
-                                $result['data'][$tip][$projectID]["percent_{$what}"] = "0%";
-                            }
-                            else {
-                                $result['data'][$tip][$projectID]["percent_{$what}"] = "100%";
-                            }
-                        } else {
-                            $result['data'][$tip][$projectID]["percent_{$what}"] = round((((float)$result['data'][$tip][$projectID]["{$what}_clean"] / (float)$result['data'][$tip][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
-                        }
-                    }
-                }
-                foreach ($result['total'] as $prj => $company) {
-                    if (!is_null($ids[$i - 1])) {
-
-                        if ($result['total'][$ids[$i - 1]]["{$what}_clean"] == 0) {
-                            if ((float)$result['total'][$projectID]["{$what}_clean"] == 0) {
-                                $result['total'][$projectID]["percent_{$what}"] = "0%";
-                            }
-                            else {
-                                $result['total'][$projectID]["percent_{$what}"] = "100%";
-                            }
-                        } else {
-                            $result['total'][$projectID]["percent_{$what}"] = round((((float)$result['total'][$projectID]["{$what}_clean"] / (float)$result['total'][$ids[$i - 1]]["{$what}_clean"]) * 100 - 100)) . "%";
-                        }
-                    }
-                }
-            }
-        }
         return $result;
     }
 
-    private $familyID, $projectID, $floor, $export;
+    private $checked;
 }
