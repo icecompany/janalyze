@@ -10,7 +10,8 @@ class JanalyzeControllerItems extends AdminController
     {
         $familyID = $this->input->getInt('familyID');
         $projectID = $this->input->get('projectID');
-        $model = $this->getModel('Items', 'JanalyzeModel', ['familyID' => $familyID, 'projectID' => $projectID]);
+        $pavilionID = $this->input->get('pavilionID');
+        $model = $this->getModel('Items', 'JanalyzeModel', ['familyID' => $familyID, 'projectID' => $projectID, 'pavilionID' => $pavilionID]);
         $items = $model->getItems();
         echo new JsonResponse($items);
     }

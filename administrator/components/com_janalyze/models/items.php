@@ -16,6 +16,8 @@ class JanalyzeModelItems extends ListModel
         $this->familyID = $config['familyID'] ?? null;
         $this->projectID = $config['projectID'] ?? null;
         $this->export = $config['export'] ?? false;
+        $this->pavilionID = $config['pavilionID'] ?? false;
+
         $this->values = [
             'with_percents' => [
                 'square' => 0,
@@ -85,6 +87,12 @@ class JanalyzeModelItems extends ListModel
             }
         } else {
             $query->where("p.familyID = {$db->q($this->familyID)}");
+        }
+        if (!empty($this->pavilionID)) {
+            $query
+                ->leftJoin("#__mkv_contract_stands cs on ci.contractStandID = cs.id")
+                ->leftJoin("#__mkv_stands s on cs.standID = s.id")
+                ->where("s.pavilionID = {$db->q($this->pavilionID)}");
         }
 
         $this->setState('list.limit', 0);
@@ -259,5 +267,5 @@ class JanalyzeModelItems extends ListModel
         parent::populateState($ordering, $direction);
     }
 
-    private $familyID, $projectID, $values, $export, $places, $finance_types, $square_types;
+    private $familyID, $projectID, $pavilionID, $values, $export, $places, $finance_types, $square_types;
 }
