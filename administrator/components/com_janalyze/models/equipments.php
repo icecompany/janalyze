@@ -31,7 +31,7 @@ class JanalyzeModelEquipments extends ListModel
             ]
         ];
         $this->places = [
-            'equipment' => 'Оборудование',
+            'equipment' => 'Оборудование и услуги',
         ];
         $this->finance_types = [
             'commerce' => 'Коммерческая',
